@@ -161,3 +161,10 @@ cython_debug/
 
 .ruff_cache/
 *.zip
+
+# CS336 datasets and training artifacts
+data/
+*.npy
+*.pt
+checkpoints/
+wandb/

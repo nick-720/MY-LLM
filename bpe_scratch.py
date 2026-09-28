@@ -1,0 +1,80 @@
+import regex as re
+
+PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+
+text = "low low low"
+
+special_tokens = ["<|endoftext|>"]
+
+vocab_size = 270
+
+pre_token_counts = {}
+
+for match in re.finditer(PAT, text):
+    pre_token = tuple(bytes([x]) for x in match.group().encode("utf-8"))
+
+    if pre_token in pre_token_counts:
+        pre_token_counts[pre_token] += 1
+    else:
+        pre_token_counts[pre_token] = 1 
+
+vocab = {}
+
+for i in range(256):
+    vocab[i] = bytes([i])
+
+for token in special_tokens:
+    vocab[(len(vocab))] = token.encode("utf-8")
+
+merges = []
+
+while len(vocab) < vocab_size:
+
+    pair_counts = {}
+    for pre_token in pre_token_counts:
+
+        freq = pre_token_counts[pre_token]
+
+        for i in range(len(pre_token) - 1):
+            pair = (pre_token[i], pre_token[i + 1])
+            if pair in pair_counts:
+                pair_counts[pair] += freq
+            else:
+                pair_counts[pair] = freq
+
+    best = None
+    best_count = 0
+    
+    if len(pair_counts) == 0:
+        break
+
+    for pair in pair_counts:
+        count = pair_counts[pair]
+        if count > best_count or (count == best_count and (pair > best)) :
+            best_count = count
+            best = pair
+
+    merges.append(best)
+
+    vocab[len(vocab)] = (best[0] + best[1])
+
+    new_pre_token_counts = {}
+
+    for pre_token in pre_token_counts:
+        freq = pre_token_counts[pre_token]
+        i = 0
+        new_tokens = []
+        while i < len(pre_token):
+            if (i <= (len(pre_token) - 2) and (pre_token[i], pre_token[i + 1]) == best):
+                new_tokens.append((pre_token[i] + pre_token[i + 1]))
+                i += 2
+            else:
+                new_tokens.append(pre_token[i])
+                i += 1
+        merged = tuple(new_tokens)
+        new_pre_token_counts[merged] = freq
+
+    pre_token_counts = new_pre_token_counts
+
+    print(best)
+    print(pre_token_counts)
