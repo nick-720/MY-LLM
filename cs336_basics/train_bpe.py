@@ -1,5 +1,7 @@
 import regex as re
 
+
+
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 def train_bpe(input_path, vocab_size, special_tokens):
@@ -7,15 +9,19 @@ def train_bpe(input_path, vocab_size, special_tokens):
     with open(input_path, encoding="utf-8") as f:
         text = f.read()
 
+    pattern = "|".join(list(re.escape(token) for token in special_tokens))
+
     pre_token_counts = {}
 
-    for match in re.finditer(PAT, text):
-        pre_token = tuple(bytes([x]) for x in match.group().encode("utf-8"))
+    for piece in re.split(pattern, text):
 
-        if pre_token in pre_token_counts:
-            pre_token_counts[pre_token] += 1
-        else:
-            pre_token_counts[pre_token] = 1 
+        for match in re.finditer(PAT, piece):
+            pre_token = tuple(bytes([x]) for x in match.group().encode("utf-8"))
+
+            if pre_token in pre_token_counts:
+                pre_token_counts[pre_token] += 1
+            else:
+                pre_token_counts[pre_token] = 1 
 
     vocab = {}
 
