@@ -39,10 +39,10 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
     merges = []
 
-    while len(vocab) < vocab_size:
 
-        pair_counts = {}
-        for pre_token in pre_token_counts:
+    # Count every pair once. Before rounds loop. We only count once, so every round uses this. 
+    pair_counts = {}
+    for pre_token in pre_token_counts:
 
             freq = pre_token_counts[pre_token]
 
@@ -53,6 +53,10 @@ def train_bpe(input_path, vocab_size, special_tokens):
                 else:
                     pair_counts[pair] = freq
 
+    # Rounds loop
+    while len(vocab) < vocab_size:
+
+        # Pick the most common pair. 
         best = None
         best_count = 0
         
@@ -64,27 +68,63 @@ def train_bpe(input_path, vocab_size, special_tokens):
             if count > best_count or (count == best_count and (pair > best)) :
                 best_count = count
                 best = pair
+        
+        # Find the words that contain best pair.
+        words_with_best_list = []
+        for pre_token in pre_token_counts:
+            for i in range(len(pre_token) - 1):
+                if (pre_token[i], pre_token[i + 1]) == best:
+                    words_with_best_list.append(pre_token)
+                    break
+    
+        # Fix each word on the list. 
+        for word in words_with_best_list:
+            freq = pre_token_counts[word]
+
+            for i in range(len(word) - 1):
+                pair = (word[i], word[i + 1])
+                pair_counts[pair] -= freq
+                if pair_counts[pair] == 0:
+                    del pair_counts[pair]
+            
+            i = 0
+            new_tokens = []
+            while i < len(word):
+                if (i <= (len(word) - 2) and (word[i], word[i + 1]) == best):
+                    new_tokens.append((word[i] + word[i + 1]))
+                    i += 2
+                else:
+                    new_tokens.append(word[i])
+                    i += 1
+            merged = tuple(new_tokens)
+            for i in range(len(merged) - 1):
+                pair = (merged[i], merged[i + 1])
+                if pair in pair_counts:
+                    pair_counts[pair] += freq
+                else:
+                    pair_counts[pair] = freq
+
+            del pre_token_counts[word]
+            pre_token_counts[merged] = freq
+
+        # DEBUG CHECK
+        #     check_counts = {}
+        #     for pre_token in pre_token_counts:
+        #         freq = pre_token_counts[pre_token]
+        #         for i in range(len(pre_token) - 1):
+        #             pair = (pre_token[i], pre_token[i + 1])
+        #             if pair in check_counts:
+        #                 check_counts[pair] += freq
+        #             else:
+        #                 check_counts[pair] = freq
+
+        # if check_counts != pair_counts:
+        #     print(check_counts)
+        #     print(pair_counts)
+        # assert check_counts == pair_counts
 
         merges.append(best)
 
         vocab[len(vocab)] = (best[0] + best[1])
-
-        new_pre_token_counts = {}
-
-        for pre_token in pre_token_counts:
-            freq = pre_token_counts[pre_token]
-            i = 0
-            new_tokens = []
-            while i < len(pre_token):
-                if (i <= (len(pre_token) - 2) and (pre_token[i], pre_token[i + 1]) == best):
-                    new_tokens.append((pre_token[i] + pre_token[i + 1]))
-                    i += 2
-                else:
-                    new_tokens.append(pre_token[i])
-                    i += 1
-            merged = tuple(new_tokens)
-            new_pre_token_counts[merged] = freq
-
-        pre_token_counts = new_pre_token_counts
 
     return vocab, merges
