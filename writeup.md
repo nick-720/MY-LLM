@@ -24,3 +24,8 @@ print("this is a test" + chr(0) + "string")
 
 # C: try b'\xa9\xc3'.decode("utf-8") and work out why the same two bytes are valid in one order and garbage in the other.
     b'\xa9\xc3' doesn't work because certain bytes have certain roles in sequences. 0xa9 can't start a sequence in UTF-8, 0xc3 can. 0xc3 is a start byte so it will be invalid if there's no subsequent bytes. 
+
+
+## pre-tokenization
+# A: What is the longest token the tokenizer learns on the training text, and why?
+    b' accomplishment' because the longest token is the longest string that appears often enough to win all of its merge. in TinyStories, 'accomplishment' is unusually common for a long word because of it's recurring use in phrases at the end of a story.
