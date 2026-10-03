@@ -50,6 +50,19 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
+def chunk_gen(input_path, start, end, special_tokens):
+    word_counts = {}
+    pattern = "|".join(list(re.escape(token) for token in special_tokens))
+    input_path.seek(start)
+    chunk = input_path.read(end - start).decode("utf-8")
+    for piece in re.split(pattern, chunk):
+        for match in PAT.finditer(piece):
+            word = match.group()
+            if word in word_counts:
+                word_counts[word] += 1
+            else:
+                word_counts[word] = 1
+    return word_counts
 
 def train_bpe(input_path, vocab_size, special_tokens):
 
@@ -64,21 +77,27 @@ def train_bpe(input_path, vocab_size, special_tokens):
         num_processes = 4
         boundaries = find_chunk_boundaries(f, num_processes, special_tokens[0].encode("utf-8"))
         for start, end in zip(boundaries[:-1], boundaries[1:]):
-            f.seek(start)
-            chunk = f.read(end - start).decode("utf-8")
-            for piece in re.split(pattern, chunk):
-                for match in PAT.finditer(piece):
-                    word = match.group()
-                    if word in word_counts:
-                        word_counts[word] += 1
-                    else:
-                        word_counts[word] = 1 
+            chunked_word_counts = chunk_gen(f, start, end, special_tokens)
+            for word in chunked_word_counts:
+                if word in word_counts:
+                    word_counts[word] += chunked_word_counts[word]
+                else:
+                    word_counts[word] = chunked_word_counts[word]
+            # f.seek(start)
+            # chunk = f.read(end - start).decode("utf-8")
+            # for piece in re.split(pattern, chunk):
+            #     for match in PAT.finditer(piece):
+            #         word = match.group()
+            #         if word in word_counts:
+            #             word_counts[word] += 1
+            #         else:
+            #             word_counts[word] = 1 
 
     pre_token_counts = {}
     for word in word_counts:
         pre_token_counts[(tuple(bytes([x]) for x in word.encode("utf-8")))] = word_counts[word]
 
-    # print(len(pre_token_counts))
+    print(len(pre_token_counts))
 
     vocab = {}
 
