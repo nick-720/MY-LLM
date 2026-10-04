@@ -1,6 +1,7 @@
 import regex as re
 import os
 from typing import BinaryIO
+from multiprocessing import Pool
 
 PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
@@ -72,17 +73,25 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
     word_counts = {}
 
+    chunked_tuple = []
+
     with open(input_path, "rb") as f:
         num_processes = 4
         boundaries = find_chunk_boundaries(f, num_processes, special_tokens[0].encode("utf-8"))
         for start, end in zip(boundaries[:-1], boundaries[1:]):
-            chunked_word_counts = chunk_gen(input_path, start, end, special_tokens)
-            for word in chunked_word_counts:
-                if word in word_counts:
-                    word_counts[word] += chunked_word_counts[word]
-                else:
-                    word_counts[word] = chunked_word_counts[word]
-            # f.seek(start)
+            tup = (input_path, start, end, special_tokens)
+            chunked_tuple.append(tup)
+    
+    with Pool(num_processes) as pool:
+        chunked_word_counts = pool.starmap(chunk_gen, chunked_tuple)
+    
+    for chunk in chunked_word_counts:
+        for word in chunk:
+            if word in word_counts:
+                word_counts[word] += chunk[word]
+            else:
+                word_counts[word] = chunk[word]
+                # f.seek(start)
             # chunk = f.read(end - start).decode("utf-8")
             # for piece in re.split(pattern, chunk):
             #     for match in PAT.finditer(piece):
