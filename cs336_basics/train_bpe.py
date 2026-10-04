@@ -76,7 +76,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
     chunked_tuple = []
 
     with open(input_path, "rb") as f:
-        num_processes = 4
+        num_processes = 32
         boundaries = find_chunk_boundaries(f, num_processes, special_tokens[0].encode("utf-8"))
         for start, end in zip(boundaries[:-1], boundaries[1:]):
             tup = (input_path, start, end, special_tokens)
@@ -206,3 +206,10 @@ def train_bpe(input_path, vocab_size, special_tokens):
         vocab[len(vocab)] = (best[0] + best[1])
 
     return vocab, merges
+
+# time testing script
+# import time
+# start = time.time()
+# vocab, merges = train_bpe("data/TinyStoriesV2-GPT4-train.txt", 257, ["<|endoftext|>"])
+# end = time.time()
+# print(end - start)
