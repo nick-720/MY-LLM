@@ -240,6 +240,6 @@ def train_bpe(input_path, vocab_size, special_tokens):
 # time testing script
 # import time
 # start = time.time()
-# vocab, merges = train_bpe("data/TinyStoriesV2-GPT4-train.txt", 257, ["<|endoftext|>"])
+# vocab, merges = train_bpe("data/TinyStoriesV2-GPT4-train.txt", 10000, ["<|endoftext|>"])
 # end = time.time()
 # print(end - start)
