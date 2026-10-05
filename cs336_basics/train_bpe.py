@@ -105,7 +105,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
     for word in word_counts:
         pre_token_counts[(tuple(bytes([x]) for x in word.encode("utf-8")))] = word_counts[word]
 
-    print(len(pre_token_counts))
+    # print(len(pre_token_counts))
 
     vocab = {}
 
@@ -120,6 +120,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
     # Count every pair once. Before rounds loop. We only count once, so every round uses this. 
     pair_counts = {}
+    pair_to_words = {}
     for pre_token in pre_token_counts:
 
             freq = pre_token_counts[pre_token]
@@ -130,6 +131,14 @@ def train_bpe(input_path, vocab_size, special_tokens):
                     pair_counts[pair] += freq
                 else:
                     pair_counts[pair] = freq
+                if pair not in pair_to_words:
+                    pair_to_words[pair] = {pre_token}
+                else: 
+                    pair_to_words[pair].add(pre_token)
+
+# create a dict where key = pair, value = set() of words
+
+    
 
     # Rounds loop
     while len(vocab) < vocab_size:
@@ -148,23 +157,33 @@ def train_bpe(input_path, vocab_size, special_tokens):
                 best = pair
         
         # Find the words that contain best pair.
+        # words_with_best_list = []
+        # for pre_token in pre_token_counts:
+        #     for i in range(len(pre_token) - 1):
+        #         if (pre_token[i], pre_token[i + 1]) == best:
+        #             words_with_best_list.append(pre_token)
+        #             break
         words_with_best_list = []
-        for pre_token in pre_token_counts:
-            for i in range(len(pre_token) - 1):
-                if (pre_token[i], pre_token[i + 1]) == best:
-                    words_with_best_list.append(pre_token)
-                    break
+        for pair in pair_to_words:
+            if pair == best:
+                for word in pair_to_words[pair]:
+                    words_with_best_list.append(word)
     
         # Fix each word on the list. 
         for word in words_with_best_list:
             freq = pre_token_counts[word]
+
 
             for i in range(len(word) - 1):
                 pair = (word[i], word[i + 1])
                 pair_counts[pair] -= freq
                 if pair_counts[pair] == 0:
                     del pair_counts[pair]
+
+                pair_to_words[pair].discard(word)
             
+
+
             i = 0
             new_tokens = []
             while i < len(word):
@@ -174,7 +193,10 @@ def train_bpe(input_path, vocab_size, special_tokens):
                 else:
                     new_tokens.append(word[i])
                     i += 1
+
             merged = tuple(new_tokens)
+            
+
             for i in range(len(merged) - 1):
                 pair = (merged[i], merged[i + 1])
                 if pair in pair_counts:
@@ -182,8 +204,16 @@ def train_bpe(input_path, vocab_size, special_tokens):
                 else:
                     pair_counts[pair] = freq
 
+                if pair not in pair_to_words:
+                    pair_to_words[pair] = {merged}
+                else:
+                    pair_to_words[pair].add(merged)
+
+
             del pre_token_counts[word]
             pre_token_counts[merged] = freq
+        
+        # print(pair_to_words)
 
         # DEBUG CHECK
         #     check_counts = {}
