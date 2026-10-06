@@ -83,11 +83,22 @@ def train_bpe(input_path, vocab_size, special_tokens):
     num_chunks = 270
 
     with open(input_path, "rb") as f:
+
+        f.seek(0, os.SEEK_END)
+        file_size = f.tell()
+        f.seek(0)
         
-        boundaries = find_chunk_boundaries(f, num_chunks, special_tokens[0].encode("utf-8"))
+        if special_tokens:
+            boundaries = find_chunk_boundaries(f, num_chunks, special_tokens[0].encode("utf-8"))
+        else: 
+            boundaries = [0, file_size]
+
         for start, end in zip(boundaries[:-1], boundaries[1:]):
             task = (input_path, start, end, special_tokens)
             tasks.append(task)
+            
+
+        
     
     with Pool(num_processes) as pool:
         for chunk_counts in pool.imap_unordered(count_chunk, tasks):
