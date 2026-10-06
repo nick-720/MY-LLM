@@ -51,46 +51,52 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
-def chunk_gen(input_path, start, end, special_tokens):
-    word_counts = {}
-    pattern = "|".join(list(re.escape(token) for token in special_tokens))
+def count_chunk(task):
+    input_path, start, end, special_tokens = task 
     with open(input_path, "rb") as f:
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8")
-        for piece in re.split(pattern, chunk):
-            for match in PAT.finditer(piece):
-                word = match.group()
-                if word in word_counts:
-                    word_counts[word] += 1
-                else:
-                    word_counts[word] = 1
+        if special_tokens:
+            pattern = "|".join(list(re.escape(token) for token in special_tokens))
+            pieces = re.split(pattern, chunk)
+        else:
+            pieces = [chunk]
+
+    word_counts = {}
+    for piece in pieces:
+        for match in PAT.finditer(piece):
+            word = match.group()
+            if word in word_counts:
+                word_counts[word] += 1
+            else:
+                word_counts[word] = 1
+    
     return word_counts
 
 def train_bpe(input_path, vocab_size, special_tokens):
 
-    # with open(input_path, encoding="utf-8") as f:
-    #     text = f.read()
-
     word_counts = {}
 
-    chunked_tuple = []
+    tasks = []
+
+    num_processes = 32
+    num_chunks = 270
 
     with open(input_path, "rb") as f:
-        num_processes = 32
-        boundaries = find_chunk_boundaries(f, num_processes, special_tokens[0].encode("utf-8"))
+        
+        boundaries = find_chunk_boundaries(f, num_chunks, special_tokens[0].encode("utf-8"))
         for start, end in zip(boundaries[:-1], boundaries[1:]):
-            tup = (input_path, start, end, special_tokens)
-            chunked_tuple.append(tup)
+            task = (input_path, start, end, special_tokens)
+            tasks.append(task)
     
     with Pool(num_processes) as pool:
-        chunked_word_counts = pool.starmap(chunk_gen, chunked_tuple)
+        for chunk_counts in pool.imap_unordered(count_chunk, tasks):
     
-    for chunk in chunked_word_counts:
-        for word in chunk:
-            if word in word_counts:
-                word_counts[word] += chunk[word]
-            else:
-                word_counts[word] = chunk[word]
+            for word in chunk_counts:
+                if word in word_counts:
+                    word_counts[word] += chunk_counts[word]
+                else:
+                    word_counts[word] = chunk_counts[word]
                 # f.seek(start)
             # chunk = f.read(end - start).decode("utf-8")
             # for piece in re.split(pattern, chunk):
