@@ -79,8 +79,8 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
     tasks = []
 
-    num_processes = 32
-    num_chunks = 270
+    num_processes = 20
+    num_chunks = 500
 
     with open(input_path, "rb") as f:
 
@@ -122,7 +122,9 @@ def train_bpe(input_path, vocab_size, special_tokens):
     for word in word_counts:
         pre_token_counts[(tuple(bytes([x]) for x in word.encode("utf-8")))] = word_counts[word]
 
-    # print(len(pre_token_counts))
+    del word_counts
+
+    print(len(pre_token_counts))
 
     vocab = {}
 
@@ -249,6 +251,8 @@ def train_bpe(input_path, vocab_size, special_tokens):
         # assert check_counts == pair_counts
 
         merges.append(best)
+        if len(vocab) % 1000 == 0:
+            print(len(vocab))
 
         vocab[len(vocab)] = (best[0] + best[1])
 
