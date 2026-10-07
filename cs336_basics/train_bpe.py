@@ -200,8 +200,11 @@ def train_bpe(input_path, vocab_size, special_tokens):
                 if pair_counts[pair] == 0:
                     del pair_counts[pair]
 
-                pair_to_words[pair].discard(word)
-            
+                if pair in pair_to_words:
+                    pair_to_words[pair].discard(word)
+
+                    if len(pair_to_words[pair]) == 0:
+                        del pair_to_words[pair]
 
 
             i = 0
