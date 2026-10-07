@@ -2,6 +2,7 @@ import regex as re
 import os
 from typing import BinaryIO
 from multiprocessing import Pool
+import time
 
 PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
@@ -158,7 +159,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
 # create a dict where key = pair, value = set() of words
 
     
-
+    rounds_start = time.time()
     # Rounds loop
     while len(vocab) < vocab_size:
 
@@ -252,7 +253,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
         merges.append(best)
         if len(vocab) % 1000 == 0:
-            print(len(vocab))
+            print(len(vocab), print(len(vocab), time.time() - rounds_start))
 
         vocab[len(vocab)] = (best[0] + best[1])
 
