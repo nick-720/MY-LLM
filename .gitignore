@@ -168,3 +168,5 @@ data/
 *.pt
 checkpoints/
 wandb/
+*.log
+

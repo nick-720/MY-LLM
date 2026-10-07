@@ -256,7 +256,7 @@ def train_bpe(input_path, vocab_size, special_tokens):
 
         merges.append(best)
         if len(vocab) % 1000 == 0:
-            print(len(vocab), print(len(vocab), time.time() - rounds_start))
+            print(len(vocab), time.time() - rounds_start)
 
         vocab[len(vocab)] = (best[0] + best[1])
 
