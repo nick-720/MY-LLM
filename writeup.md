@@ -31,3 +31,9 @@ print("this is a test" + chr(0) + "string")
 Training took 61 seconds and peaked at about 7.8 GB of memory. Longest vocab token is b' accomplishment', which makes sense because BPE merges the most frequent pairs, and stories often end with phrases like 'a sense of accomplishment.'
 ### B: Profile your code. What part of the tokenizer training process takes the most time?
 Merging takes the most time, about 35 seconds, roughly 35% more than parallelized pre-tokenization at 26 seconds. 
+
+## BPE Training on OpenWebText (train_bpe_expts_owt)
+### A: What is the longest token in the vocabulary? Does it make sense?
+The longest token is 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ', which makes sense because of mojibake, a common phenomenon in scraped web text: characters like é become two characters if encoded with UTF-8 and decoded with Latin-1. When this happens repeatedly, you can get long sequences of those new characters, and the BPE tokenizer packs those sequences into a token because of their frequency.
+### B: Compare and contrast the tokenizer that you get training on TinyStories versus OpenWebText.
+TinyStories shares 72% of its learned tokens with OWT and TinyStories-only tokens are mostly friendly/casual since they come from children's stories, while OWT-only tokens are highly technical because they are scraped from general web text (tech, news, science, gaming, etc.). TinyStories has approx 60,000 distinct pre-tokens, and OWT has 6.6 million which explains why it has a broader vocabulary (junk included).
