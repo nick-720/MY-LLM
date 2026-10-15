@@ -27,3 +27,12 @@ class Tokenizer:
         special_tokens = special_tokens or []
         
         return cls(vocab, merges, special_tokens)
+
+    def decode(self, ids: list[int]) -> str:
+        bytes_list = []
+        for token_id in ids:
+            bytes_list.append(self.vocab[token_id])
+        text = b''.join(bytes_list).decode("utf-8", errors='replace')
+
+        return text
+
