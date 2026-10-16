@@ -1,4 +1,6 @@
 import pickle
+import regex as re
+from cs336_basics.train_bpe import PAT
 
 class Tokenizer:
     def __init__(self, vocab, merges, special_tokens=None):
@@ -28,12 +30,23 @@ class Tokenizer:
         
         return cls(vocab, merges, special_tokens)
 
-    def decode(self, ids: list[int]) -> str:
-        bytes_list = []
-        for token_id in ids:
-            bytes_list.append(self.vocab[token_id])
-        text = b''.join(bytes_list).decode("utf-8", errors='replace')
-        return text
+    def encode(self, text:str) -> list[int]:
+        if self.special_tokens:
+            pattern = "|".join(list(re.escape(token) for token in self.special_tokens))
+            pieces = re.split(f"({pattern})", text)
+        else:
+            pieces = [text]
+        ids = []
+        for piece in pieces:
+            if piece in self.special_tokens:
+                ids.append(self.flipped_vocab[piece.encode('utf-8')])
+            else:
+                for match in PAT.finditer(piece):
+                    word = match.group()
+                    returned_ids = self._encode_word(word)
+                    ids.extend(returned_ids)
+        return ids
+
 
     def _encode_word(self, word: str) -> list[int]:
         word_bytes = word.encode("utf-8")
@@ -60,3 +73,10 @@ class Tokenizer:
                     i += 1
         tuple_word = tuple(new_word)
         return tuple_word
+
+    def decode(self, ids: list[int]) -> str:
+        bytes_list = []
+        for token_id in ids:
+            bytes_list.append(self.vocab[token_id])
+        text = b''.join(bytes_list).decode("utf-8", errors='replace')
+        return text
