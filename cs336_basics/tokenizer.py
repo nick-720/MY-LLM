@@ -41,7 +41,12 @@ class Tokenizer:
         for bytes_value in word_bytes:
             bytes_list.append(bytes([bytes_value]))
         bytes_tuple = tuple(bytes_list)
-        return bytes_tuple
+        for merge in self.merges:
+            bytes_tuple = self._merge_pair(bytes_tuple, merge)
+        vocab_ids = []
+        for token in bytes_tuple:
+            vocab_ids.append(self.flipped_vocab[token])
+        return vocab_ids
 
     def _merge_pair(self, word: tuple[bytes, ...], pair: tuple[bytes, bytes]) -> tuple[bytes, ...]:
         i = 0
