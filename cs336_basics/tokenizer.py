@@ -7,6 +7,7 @@ class Tokenizer:
         self.vocab = vocab
         self.merges = merges
         self.special_tokens = special_tokens or []
+        self.cache = {}
 
         for special_token in self.special_tokens:
             special_token_bytes = special_token.encode("utf-8")
@@ -48,8 +49,15 @@ class Tokenizer:
                     ids.extend(returned_ids)
         return ids
 
+    def encode_iterable(self, iterable):
+        for line in iterable:
+            ids = self.encode(line)
+            for _id in ids:
+                yield _id
 
     def _encode_word(self, word: str) -> list[int]:
+        if word in self.cache:
+            return self.cache[word]
         word_bytes = word.encode("utf-8")
         bytes_list = []
         for bytes_value in word_bytes:
@@ -60,6 +68,7 @@ class Tokenizer:
         vocab_ids = []
         for token in bytes_tuple:
             vocab_ids.append(self.flipped_vocab[token])
+        self.cache[word] = vocab_ids
         return vocab_ids
 
     def _merge_pair(self, word: tuple[bytes, ...], pair: tuple[bytes, bytes]) -> tuple[bytes, ...]:
