@@ -31,14 +31,15 @@ class Tokenizer:
         return cls(vocab, merges, special_tokens)
 
     def encode(self, text:str) -> list[int]:
-        if self.special_tokens:
-            pattern = "|".join(list(re.escape(token) for token in self.special_tokens))
+        special_tokens_sorted = sorted(self.special_tokens, key=len, reverse=True)
+        if special_tokens_sorted:
+            pattern = "|".join(list(re.escape(token) for token in special_tokens_sorted))
             pieces = re.split(f"({pattern})", text)
         else:
             pieces = [text]
         ids = []
         for piece in pieces:
-            if piece in self.special_tokens:
+            if piece in special_tokens_sorted:
                 ids.append(self.flipped_vocab[piece.encode('utf-8')])
             else:
                 for match in PAT.finditer(piece):
