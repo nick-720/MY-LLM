@@ -37,3 +37,26 @@ Merging takes the most time, about 35 seconds, roughly 35% more than parallelize
 The longest token is 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ', which makes sense because of mojibake, a common phenomenon in scraped web text: characters like é become two characters if encoded with UTF-8 and decoded with Latin-1. When this happens repeatedly, you can get long sequences of those new characters, and the BPE tokenizer packs those sequences into a token because of their frequency.
 ### B: Compare and contrast the tokenizer that you get training on TinyStories versus OpenWebText.
 TinyStories shares 72% of its learned tokens with OWT and TinyStories-only tokens are mostly friendly/casual since they come from children's stories, while OWT-only tokens are highly technical because they are scraped from general web text (tech, news, science, gaming, etc.). TinyStories has approx 60,000 distinct pre-tokens, and OWT has 6.6 million which explains why it has a broader vocabulary (junk included).
+
+## Tokenizer Experiments
+### (a) Sample 10 documents from TinyStories and OpenWebText. Using your previously-trained
+### TinyStories and OpenWebText tokenizers (10K and 32K vocabulary size, respectively),
+### encode these sampled documents into integer IDs. What is each tokenizer’s compression ratio
+### (bytes/token)?
+From each validation file, I split on `<|endoftext|>` and kept `docs[1:11]` (skipping the first piece in case it was cut off), and then dividing once the total encoded bytes across all documents by its total tokens generated we get the following results.
+TinyStories compression ratio: 4.03
+OpenWebText compression ratio: 4.51
+
+### (b) What happens if you tokenize your OpenWebText sample with the TinyStories tokenizer?
+### Compare the compression ratio and/or qualitatively describe what happens.
+Tokenizing OWT through TinyStories tokenizer results in a lower compression ratio (4.51 vs. 3.44 = ~30% more tokens). This is because TinyStories never learned the words from OWT so the TinyStories tokenizer has to build more tokens from the OWT words, and because there are fewer merges to use.
+### (c) Estimate the throughput of your tokenizer (e.g., in bytes/second). How long would it take to
+### tokenize the Pile dataset (825GB of text)?
+
+Deliverable: A one-to-two sentence response.
+### (d) Using your TinyStories and OpenWebText tokenizers, encode the respective training and
+### development datasets into a sequence of integer token IDs. We’ll use this later to train our
+### language model. We recommend serializing the token IDs as a NumPy array of datatype
+### uint16. Why is uint16 an appropriate choice?
+
+Deliverable: A one-to-two sentence response.
