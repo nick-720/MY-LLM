@@ -8,6 +8,10 @@ class Tokenizer:
         self.merges = merges
         self.special_tokens = special_tokens or []
         self.cache = {}
+        self.merge_ranks = {}
+        for position, merge in enumerate(self.merges):
+            self.merge_ranks[tuple(merge)] = position
+
 
         for special_token in self.special_tokens:
             special_token_bytes = special_token.encode("utf-8")
@@ -63,8 +67,26 @@ class Tokenizer:
         for bytes_value in word_bytes:
             bytes_list.append(bytes([bytes_value]))
         bytes_tuple = tuple(bytes_list)
-        for merge in self.merges:
-            bytes_tuple = self._merge_pair(bytes_tuple, merge)
+
+        # for merge in self.merges:
+        #     bytes_tuple = self._merge_pair(bytes_tuple, merge)
+        while True:
+            pairs = []
+            for i in range(len(bytes_tuple) - 1):
+                pairs.append((bytes_tuple[i], bytes_tuple[i + 1]))
+            best_pair = None
+            best_rank = None
+            for pair in pairs:
+                if pair not in self.merge_ranks:
+                    continue
+                rank = self.merge_ranks[pair]
+                if best_rank is None or rank < best_rank:
+                    best_pair = pair
+                    best_rank = rank
+            if best_pair is None:
+                break
+            bytes_tuple = self._merge_pair(bytes_tuple, best_pair)
+
         vocab_ids = []
         for token in bytes_tuple:
             vocab_ids.append(self.flipped_vocab[token])
