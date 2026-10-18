@@ -52,8 +52,8 @@ OpenWebText compression ratio: 4.51
 Tokenizing OWT through TinyStories tokenizer results in a lower compression ratio (4.51 vs. 3.44 = ~30% more tokens). This is because TinyStories never learned the words from OWT so the TinyStories tokenizer has to build more tokens from the OWT words, and because there are fewer merges to use.
 ### (c) Estimate the throughput of your tokenizer (e.g., in bytes/second). How long would it take to
 ### tokenize the Pile dataset (825GB of text)?
+Approximately 1.76 days: tested throughput on 10MB of OWT_valid on owt_vocab and owt_merges and got 5,411,000 bytes/second, scaling up to 825GB @ the same throughput gets us to 1.76 days. This assumes throughput stays constant. Heaps' law suggests are larger run would be somewhat faster, while the Pile's more varied sources could slow it down.
 
-Deliverable: A one-to-two sentence response.
 ### (d) Using your TinyStories and OpenWebText tokenizers, encode the respective training and
 ### development datasets into a sequence of integer token IDs. We’ll use this later to train our
 ### language model. We recommend serializing the token IDs as a NumPy array of datatype
