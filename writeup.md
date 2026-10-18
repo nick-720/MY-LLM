@@ -58,5 +58,4 @@ Approximately 1.76 days: tested throughput on 10MB of OWT_valid on owt_vocab and
 ### development datasets into a sequence of integer token IDs. We’ll use this later to train our
 ### language model. We recommend serializing the token IDs as a NumPy array of datatype
 ### uint16. Why is uint16 an appropriate choice?
-
-Deliverable: A one-to-two sentence response.
+uint16 is appropriate because our largest ID is 31,999 (32k tokens in OWT vocab, 10k in TS vocab), and uint16 holds ~65.5k values. uint8 would be far too small (256 values) and the other alternative int64 holds more than enough, but each id would be 8 bytes so the file size would be unnecessarily large (21.6GB with int64 vs. 5.4GB with uint16 on OWT training set)
