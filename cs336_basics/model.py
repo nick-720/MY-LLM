@@ -45,3 +45,18 @@ class RMSNorm(nn.Module):
         rms = ((x ** 2).mean(dim=-1, keepdim=True) + self.eps) ** 0.5
         result = (x / rms) * self.gain
         return result.to(in_dtype)
+
+class SwiGLU(nn.Module):
+    def __init__(self, d_model, d_ff, device=None, dtype=None):
+        super().__init__()
+        self.W1 = Linear(d_model, d_ff, device=device, dtype=dtype)
+        self.W2 = Linear(d_ff, d_model, device=device, dtype=dtype)
+        self.W3 = Linear(d_model, d_ff, device=device, dtype=dtype)
+
+    def forward(self, x):
+        z = self.W1(x)
+        gate = z * torch.sigmoid(z)
+        values = self.W3(x)
+        gated_values = gate * values
+        result = self.W2(gated_values)
+        return result
