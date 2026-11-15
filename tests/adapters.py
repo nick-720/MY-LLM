@@ -15,6 +15,7 @@ from cs336_basics.model import Embedding
 from cs336_basics.model import RMSNorm
 from cs336_basics.model import SwiGLU
 from cs336_basics.model import softmax
+from cs336_basics.model import scaled_dot_product_attention
 
 
 def run_linear(
@@ -119,7 +120,8 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    raise NotImplementedError
+    scaled_dot_product_attention_ = scaled_dot_product_attention(Q, K, V, mask)
+    return scaled_dot_product_attention_
 
 
 def run_multihead_self_attention(

@@ -17,6 +17,15 @@ def softmax(x, dim):
     result = max_subtracted_exp / max_subtracted_exp.sum(dim=dim, keepdim=True)    # 4. divide by the sum along dim, also kept as a size-1 dimension
     return result
 
+def scaled_dot_product_attention(Q, K, V, mask=None):
+    scores = einsum(Q, K, "... queries d_k, ... keys d_k -> ... queries keys")  # 1. scores = Q Kᵀ, for every batch, as one einsum
+    d_k = Q.shape[-1]
+    scaled_scores = scores / (d_k ** 0.5)    # 2. divide the scores by √d_k
+    if mask is not None:
+        scaled_scores = scaled_scores.masked_fill(~mask, float("-inf"))    # 3. if there's a mask: set the scores where mask is False to −∞
+    weights = softmax(scaled_scores, dim=-1)    # 4. softmax along the keys dimension
+    return einsum(weights, V, "... queries keys, ... keys d_v -> ... queries d_v")    # 5. multiply the weights by V and return
+
 class Linear(nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
         super().__init__()  # 1. switch on nn.Module's machinery
