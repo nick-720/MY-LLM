@@ -14,6 +14,7 @@ from cs336_basics.model import Linear
 from cs336_basics.model import Embedding
 from cs336_basics.model import RMSNorm
 from cs336_basics.model import SwiGLU
+from cs336_basics.model import softmax
 
 
 def run_linear(
@@ -448,7 +449,8 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    raise NotImplementedError
+    softmax_ = softmax(in_features, dim=dim)
+    return softmax_
 
 
 def run_cross_entropy(

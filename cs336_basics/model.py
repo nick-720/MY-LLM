@@ -10,6 +10,13 @@ import torch
 import torch.nn as nn
 from einops import einsum
 
+def softmax(x, dim):
+    x_max = x.amax(dim=dim, keepdim=True)    # 1. find the largest value along dim, kept as a size-1 dimension
+    max_subtracted = x - x_max    # 2. subtract it from x
+    max_subtracted_exp = torch.exp(max_subtracted)  # 3. exp every element
+    result = max_subtracted_exp / max_subtracted_exp.sum(dim=dim, keepdim=True)    # 4. divide by the sum along dim, also kept as a size-1 dimension
+    return result
+
 class Linear(nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
         super().__init__()  # 1. switch on nn.Module's machinery
@@ -18,7 +25,6 @@ class Linear(nn.Module):
         nn.init.trunc_normal_(W, mean=0.0, std=std, a= -3 * std, b= 3 * std) # 4. fill the tensor with trunc_normal_, cutoffs at ±3 std
         self.W = nn.Parameter(W) # 5. wrap it in nn.Parameter and store it as self.W
         
-
     def forward(self, x):
         return einsum(x, self.W, "... d_in, d_out d_in -> ... d_out") # 6. your einsum line, using self.W
 
@@ -60,3 +66,4 @@ class SwiGLU(nn.Module):
         gated_values = gate * values
         result = self.W2(gated_values)
         return result
+
