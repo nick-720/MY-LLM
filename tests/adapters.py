@@ -16,6 +16,7 @@ from cs336_basics.model import RMSNorm
 from cs336_basics.model import SwiGLU
 from cs336_basics.model import softmax
 from cs336_basics.model import scaled_dot_product_attention
+from cs336_basics.model import RotaryPositionalEmbedding
 
 
 def run_linear(
@@ -217,7 +218,9 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
-    raise NotImplementedError
+    rope = RotaryPositionalEmbedding(theta, d_k, max_seq_len)
+    result = rope(in_query_or_key, token_positions)
+    return result
 
 
 def run_transformer_block(

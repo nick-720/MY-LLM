@@ -8,7 +8,7 @@
 
 import torch
 import torch.nn as nn
-from einops import einsum
+from einops import einsum, rearrange
 
 def softmax(x, dim):
     x_max = x.amax(dim=dim, keepdim=True)    # 1. find the largest value along dim, kept as a size-1 dimension
@@ -76,3 +76,22 @@ class SwiGLU(nn.Module):
         result = self.W2(gated_values)
         return result
 
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(self, theta, d_k, max_seq_len, device=None):
+        super().__init__()
+        speeds = 1 / (theta ** (torch.arange(0, d_k, 2, device=device) / d_k))     # 1. the speeds: one per pair, from 1 down to slow
+        positions = torch.arange(max_seq_len, device=device)    # 2. the positions: 0, 1, 2, ... up to max_seq_len − 1
+        angles = positions[:, None] * speeds    # 3. the angles: every position × every speed, a grid
+        self.register_buffer("cos", torch.cos(angles), persistent=False)    # 4. store cos and sin of that grid, as fixed buffers
+        self.register_buffer("sin", torch.sin(angles), persistent=False)
+
+    def forward(self, x, token_positions):
+        cos = self.cos[token_positions]
+        sin = self.sin[token_positions]    # 5. look up the cos and sin rows for these tokens' positions
+        x1 = x[..., 0::2]
+        x2 = x[..., 1::2]    # 6. split x into pairs: the first numbers and the second numbers
+        new1 = x1 * cos - x2 * sin  
+        new2 = x1 * sin + x2 * cos  # 7. rotate every pair with the recipe
+        stacked = torch.stack([new1, new2], dim=-1)
+        result = rearrange(stacked, "... pairs two -> ... (pairs two)")    # 8. put the pairs back together and return
+        return result
