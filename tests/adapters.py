@@ -19,6 +19,8 @@ from cs336_basics.model import scaled_dot_product_attention
 from cs336_basics.model import RotaryPositionalEmbedding
 from cs336_basics.model import CausalMultiHeadSelfAttention
 from cs336_basics.model import TransformerBlock
+from cs336_basics.model import TransformerLM
+from cs336_basics.model import silu
 
 
 def run_linear(
@@ -385,7 +387,22 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    rtl = TransformerLM(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, rope_theta)
+    new_weights = {}
+    for key, value in weights.items():
+        new_key = key.replace("w1", "W1").replace("w2", "W2").replace("w3", "W3")
+        if "ln" in key:
+            new_key = new_key.replace("weight", "gain")
+        elif "embeddings" in key:
+            new_key = new_key.replace("weight", "E")
+        else:
+            new_key = new_key.replace("weight", "W")
+
+        new_weights[new_key] = value
+
+    rtl.load_state_dict(new_weights)
+    result = rtl(in_indices)
+    return result
 
 
 def run_rmsnorm(
@@ -425,7 +442,8 @@ def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
         Float[Tensor,"..."]: of with the same shape as `in_features` with the output of applying
         SiLU to each element.
     """
-    raise NotImplementedError
+    rs = silu(in_features)
+    return rs
 
 
 def run_get_batch(

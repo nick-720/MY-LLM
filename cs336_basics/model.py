@@ -17,6 +17,10 @@ def softmax(x, dim):
     result = max_subtracted_exp / max_subtracted_exp.sum(dim=dim, keepdim=True)    # 4. divide by the sum along dim, also kept as a size-1 dimension
     return result
 
+def silu(x):
+    gate = x * torch.sigmoid(x)
+    return gate
+
 def scaled_dot_product_attention(Q, K, V, mask=None):
     scores = einsum(Q, K, "... queries d_k, ... keys d_k -> ... queries keys")  # 1. scores = Q Kᵀ, for every batch, as one einsum
     d_k = Q.shape[-1]
@@ -70,7 +74,7 @@ class SwiGLU(nn.Module):
 
     def forward(self, x):
         z = self.W1(x)
-        gate = z * torch.sigmoid(z)
+        gate = silu(z)
         values = self.W3(x)
         gated_values = gate * values
         result = self.W2(gated_values)
@@ -141,3 +145,20 @@ class TransformerBlock(nn.Module):
         x = x + self.attn(self.ln1(x), token_positions)    # 2. the attention sublayer, added to the stream
         x = x + self.ffn(self.ln2(x))   # 3. the feed-forward sublayer, added to the stream
         return x    # 4. return
+
+class TransformerLM(nn.Module):
+    def __init__(self, vocab_size, context_length, d_model, num_layers,
+                 num_heads, d_ff, rope_theta, device=None, dtype=None):
+        super().__init__()
+        self.token_embeddings = Embedding(num_embeddings=vocab_size, embedding_dim=d_model, device=device, dtype=dtype)    # 1. token_embeddings: an Embedding
+        self.layers = nn.ModuleList([TransformerBlock(d_model=d_model, num_heads=num_heads, d_ff=d_ff, max_seq_len=context_length, theta=rope_theta, device=device, dtype=dtype) for _ in range(num_layers)])  # 2. layers: num_layers TransformerBlocks
+        self.ln_final = RMSNorm(d_model, eps=1e-5, device=device, dtype=dtype)    # 3. ln_final: an RMSNorm
+        self.lm_head = Linear(in_features=d_model, out_features=vocab_size, device=device, dtype=dtype)   # 4. lm_head: a Linear from d_model to vocab_size
+
+    def forward(self, in_indices):
+        x = self.token_embeddings(in_indices)   # 5. look up the embeddings
+        for layer in self.layers:
+            x = layer(x)  # 6. run every block, in order
+        final_norm = self.ln_final(x)   # 7. the final norm
+        scores = self.lm_head(final_norm)
+        return scores  # 8. the LM head, and return the scores
