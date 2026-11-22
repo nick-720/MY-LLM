@@ -127,3 +127,17 @@ class CausalMultiHeadSelfAttention(nn.Module):
         out = rearrange(out, "... heads seq d_k -> ... seq (heads d_k)", heads=self.num_heads) # 9. glue the heads back: (..., heads, seq, d_k) → (..., seq, d_model)
         result = self.output_proj(out)
         return result    # 10. the output layer, and return
+
+class TransformerBlock(nn.Module):
+    def __init__(self, d_model, num_heads, d_ff, max_seq_len, theta, device=None, dtype=None):
+        super().__init__()
+        self.ln1 = RMSNorm(d_model=d_model, eps=1e-5, device=device, dtype=dtype)
+        self.attn = CausalMultiHeadSelfAttention(d_model=d_model, num_heads=num_heads, max_seq_len=max_seq_len, theta=theta, device=device, dtype=dtype)
+        self.ln2 = RMSNorm(d_model=d_model, eps=1e-5, device=device, dtype=dtype)
+        self.ffn = SwiGLU(d_model=d_model, d_ff=d_ff, device=device, dtype=dtype)
+        # 1. build the block's four parts: ln1, attn, ln2, ffn
+
+    def forward(self, x, token_positions=None):
+        x = x + self.attn(self.ln1(x), token_positions)    # 2. the attention sublayer, added to the stream
+        x = x + self.ffn(self.ln2(x))   # 3. the feed-forward sublayer, added to the stream
+        return x    # 4. return
