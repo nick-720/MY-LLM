@@ -17,6 +17,7 @@ from cs336_basics.model import SwiGLU
 from cs336_basics.model import softmax
 from cs336_basics.model import scaled_dot_product_attention
 from cs336_basics.model import RotaryPositionalEmbedding
+from cs336_basics.model import CausalMultiHeadSelfAttention
 
 
 def run_linear(
@@ -156,7 +157,10 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    rmsa = CausalMultiHeadSelfAttention(d_model, num_heads)
+    rmsa.load_state_dict({"q_proj.W": q_proj_weight, "k_proj.W": k_proj_weight, "v_proj.W": v_proj_weight, "output_proj.W": o_proj_weight})
+    result = rmsa(in_features)
+    return result
 
 
 def run_multihead_self_attention_with_rope(
@@ -196,7 +200,10 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    rmsa = CausalMultiHeadSelfAttention(d_model, num_heads, max_seq_len, theta)
+    rmsa.load_state_dict({"q_proj.W": q_proj_weight, "k_proj.W": k_proj_weight, "v_proj.W": v_proj_weight, "output_proj.W": o_proj_weight})
+    result = rmsa(in_features, token_positions)
+    return result
 
 
 def run_rope(

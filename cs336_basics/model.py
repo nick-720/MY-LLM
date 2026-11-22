@@ -95,3 +95,35 @@ class RotaryPositionalEmbedding(nn.Module):
         stacked = torch.stack([new1, new2], dim=-1)
         result = rearrange(stacked, "... pairs two -> ... (pairs two)")    # 8. put the pairs back together and return
         return result
+
+class CausalMultiHeadSelfAttention(nn.Module):
+    def __init__(self, d_model, num_heads, max_seq_len=None, theta=None, device=None, dtype=None):
+        super().__init__()
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads   # 1. store num_heads, and compute d_k
+        self.q_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.k_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.v_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.output_proj = Linear(d_model, d_model, device=device, dtype=dtype)    # 2. four Linear layers: q_proj, k_proj, v_proj, output_proj
+        if theta is not None:
+            self.rope = RotaryPositionalEmbedding(theta=theta, d_k=self.d_k, max_seq_len=max_seq_len, device=device)    # 3. if theta was given: a RoPE module, built with d_k
+        else:
+            self.rope = None
+
+    def forward(self, x, token_positions=None):
+        Q, K, V = self.q_proj(x), self.k_proj(x), self.v_proj(x)   # 4. make Q, K, V
+        Q = rearrange(Q, "... seq (heads d_k) -> ... heads seq d_k", heads=self.num_heads)
+        K = rearrange(K, "... seq (heads d_k) -> ... heads seq d_k", heads=self.num_heads)
+        V = rearrange(V, "... seq (heads d_k) -> ... heads seq d_k", heads=self.num_heads)      # 5. split each into heads: (..., seq, d_model) → (..., heads, seq, d_k)
+        if token_positions is None:
+            token_positions = torch.arange(x.shape[-2], device=x.device)
+        token_positions = rearrange(token_positions, "... seq -> ... 1 seq")
+        if self.rope is not None:
+            Q = self.rope(Q, token_positions)
+            K = self.rope(K, token_positions) # 6. if there's RoPE: rotate Q and K
+        mask = torch.ones(x.shape[-2], x.shape[-2], dtype=torch.bool, device=x.device)
+        mask = torch.tril(mask)    # 7. build the causal mask
+        out = scaled_dot_product_attention(Q=Q, K=K, V=V, mask=mask)    # 8. run your SDPA
+        out = rearrange(out, "... heads seq d_k -> ... seq (heads d_k)", heads=self.num_heads) # 9. glue the heads back: (..., heads, seq, d_k) → (..., seq, d_model)
+        result = self.output_proj(out)
+        return result    # 10. the output layer, and return
