@@ -59,3 +59,38 @@ Approximately 1.76 days: tested throughput on 10MB of OWT_valid on owt_vocab and
 ### language model. We recommend serializing the token IDs as a NumPy array of datatype
 ### uint16. Why is uint16 an appropriate choice?
 uint16 is appropriate because our largest ID is 31,999 (32k tokens in OWT vocab, 10k in TS vocab), and uint16 holds ~65.5k values. uint8 would be far too small (256 values) and the other alternative int64 holds more than enough, but each id would be 8 bytes so the file size would be unnecessarily large (21.6GB with int64 vs. 5.4GB with uint16 on OWT training set)
+
+## Transformer LM Resource Accounting
+### (a) Consider a GPT-2 XL-sized model using our assignment architecture, which has the following configuration:
+### vocab_size: 50,257
+### context_length: 1,024
+### num_layers: 48
+### d_model: 1,600
+### num_heads: 25
+### d_ff: 4,288 (the nearest multiple of 64 to 8/3×1,600)
+### Suppose we constructed our model using this configuration. How many trainable parameters would our model have? Assuming each parameter is represented using single-precision floating point, how much memory is required to just load this model?
+1.64 Billion Parameters. We'd need 6.6GB to load the weights (1,640,452,800 parameters × 4 bytes each ≈ 6.6 GB)
+### (b) Identify the matrix multiplies required to complete a forward pass of our GPT-2 XL-shaped model. How many FLOPs do these matrix multiplies require in total? Assume that our input sequence has context_length tokens.
+### Deliverable: A list of matrix multiplies (with descriptions), and the total number of FLOPs required.
+- proj = 4 * 2 * seq * d_model ** 2 (Q, K, V and output projections per block)
+- scores = 2 * (seq ** 2) * d_model (attention scores per block)
+- mix = 2 * (seq ** 2) * d_model (weights x values per block)
+- ffn = 3 * 2 * seq * d_model * d_ff (feed-forward W1, W2, W3 per block)
+- block = proj + scores + mix + ffn (every above matmul put together for a block... not a matmul itself though)
+- lm_head = 2 * seq * d_model * vocab_size (LM head matmul)
+- total = num_layers * block + lm_head
+Total is approx. 3.5 trillion FLOPs (3,516,769,894,400). Sized used: seq = 1,024, d_model = 1,600, d_ff = 4,288, num_layers = 48. 
+## (c) Based on your analysis above, which parts of the model require the most FLOPs?
+The feed-forward (MLP) dominates at about 58%, the attention projections come second at about 29%, and the score and mix steps and LM head are each only around 5%. 
+## (d) Repeat your analysis with GPT-2 small (12 layers, 768 d_model, 12 heads), GPT-2 medium (24 layers, 1024 d_model, 16 heads), and GPT-2 large (36 layers, 1280 d_model, 20 heads). As the model size increases, which parts of the Transformer LM take up proportionally more or less of the total FLOPs?
+## Deliverable: For each model, provide a breakdown of model components and its associated FLOPs (as a proportion of the total FLOPs required for a forward pass). In addition, provide a one-to-two sentence description of how varying the model size changes the proportional FLOPs of each component.
+           small   medium   large   XL
+proj        20%     25%     27%    29%
+scores       7%      6%      5%     5%
+mix          7%      6%      5%     5%
+ffn         40%     50%     54%    58%
+lm_head     27%     13%      7%     5%
+
+Varying the model size changes the proportional FLOPs for each component through quadratic growth for ffn and attn projections (both sides of the weight table grow with d_model) and linear growth for the rest (there's only one d_model so any changes to it result in linear growth)
+
+## (e) The total flops increase 38 times (the 91% grows 16 times, and the other 9% grows 256 times -- avg to 38). The relative contributions to FLOPs changes via seq (context length) where mix and scores use seq on both sides of the attention score grid (resulting in quadratic growth) while the rest of the components use seq on one side, so their growth is affected linearly by context changes. scores and mix rise from approx 9% to approx 62% of all FLOPs, overtaking the feed-forward.
